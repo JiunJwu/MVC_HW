@@ -7,18 +7,28 @@ using System.Net;
 using System.Web;
 using System.Web.Mvc;
 using MVCHW.Models;
+using Omu.ValueInjecter;
 
 namespace MVCHW.Controllers
 {
     public class 客戶聯絡人Controller : Controller
     {
-        private 客戶資料Entities db = new 客戶資料Entities();
+        客戶資料Repository ClientData;
+        客戶聯絡人Repository ClientContact;
+        客戶銀行資訊Repository ClientBank;
+
+        public 客戶聯絡人Controller()
+        {
+            ClientData = RepositoryHelper.Get客戶資料Repository();
+            ClientContact = RepositoryHelper.Get客戶聯絡人Repository(ClientData.UnitOfWork);
+            ClientBank = RepositoryHelper.Get客戶銀行資訊Repository(ClientContact.UnitOfWork);
+        }
+
 
         // GET: 客戶聯絡人
         public ActionResult Index()
         {
-            var 客戶聯絡人 = db.客戶聯絡人.Include(客 => 客.客戶資料);
-            return View(客戶聯絡人.ToList());
+            return View(ClientContact.All());
         }
 
         // GET: 客戶聯絡人/Details/5
@@ -28,18 +38,19 @@ namespace MVCHW.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            客戶聯絡人 客戶聯絡人 = db.客戶聯絡人.Find(id);
-            if (客戶聯絡人 == null)
+            var CC= ClientContact.Get單一筆客戶聯絡人資料(id.Value);
+
+            if (CC == null)
             {
                 return HttpNotFound();
             }
-            return View(客戶聯絡人);
+            return View(CC);
         }
 
         // GET: 客戶聯絡人/Create
         public ActionResult Create()
         {
-            ViewBag.客戶Id = new SelectList(db.客戶資料, "Id", "客戶名稱");
+            ViewBag.客戶Id = new SelectList(ClientData.All().OrderBy(p => p.客戶名稱), "Id", "客戶名稱");
             return View();
         }
 
@@ -48,16 +59,20 @@ namespace MVCHW.Controllers
         // 詳細資訊，請參閱 https://go.microsoft.com/fwlink/?LinkId=317598。
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create([Bind(Include = "Id,客戶Id,職稱,姓名,Email,手機,電話")] 客戶聯絡人 客戶聯絡人)
+        public ActionResult Create(客戶聯絡人 客戶聯絡人)
         {
             if (ModelState.IsValid)
             {
-                db.客戶聯絡人.Add(客戶聯絡人);
-                db.SaveChanges();
-                return RedirectToAction("Index");
+                if (ClientContact.確認信箱不重複(客戶聯絡人))
+                {
+                    ClientContact.Add(客戶聯絡人);
+                    ClientContact.UnitOfWork.Commit();
+                    return RedirectToAction("Index");
+                }
+                TempData["Message"] = "信箱重複";
             }
 
-            ViewBag.客戶Id = new SelectList(db.客戶資料, "Id", "客戶名稱", 客戶聯絡人.客戶Id);
+            ViewBag.客戶Id = new SelectList(ClientData.All(), "Id", "客戶名稱", 客戶聯絡人.客戶Id);
             return View(客戶聯絡人);
         }
 
@@ -68,13 +83,13 @@ namespace MVCHW.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            客戶聯絡人 客戶聯絡人 = db.客戶聯絡人.Find(id);
-            if (客戶聯絡人 == null)
+            var CC = ClientContact.Get單一筆客戶聯絡人資料(id.Value);
+            if (CC == null)
             {
                 return HttpNotFound();
             }
-            ViewBag.客戶Id = new SelectList(db.客戶資料, "Id", "客戶名稱", 客戶聯絡人.客戶Id);
-            return View(客戶聯絡人);
+            ViewBag.客戶Id = new SelectList(ClientData.All(), "Id", "客戶名稱", CC.客戶Id);
+            return View(CC);
         }
 
         // POST: 客戶聯絡人/Edit/5
@@ -82,15 +97,16 @@ namespace MVCHW.Controllers
         // 詳細資訊，請參閱 https://go.microsoft.com/fwlink/?LinkId=317598。
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit([Bind(Include = "Id,客戶Id,職稱,姓名,Email,手機,電話")] 客戶聯絡人 客戶聯絡人)
+        public ActionResult Edit(int ID,客戶聯絡人Edit 客戶聯絡人)
         {
             if (ModelState.IsValid)
             {
-                db.Entry(客戶聯絡人).State = EntityState.Modified;
-                db.SaveChanges();
+                var CC = ClientContact.Get單一筆客戶聯絡人資料(ID);
+                CC.InjectFrom(客戶聯絡人);
+                ClientBank.UnitOfWork.Commit();
                 return RedirectToAction("Index");
             }
-            ViewBag.客戶Id = new SelectList(db.客戶資料, "Id", "客戶名稱", 客戶聯絡人.客戶Id);
+            ViewBag.客戶Id = new SelectList(ClientData.All(), "Id", "客戶名稱", 客戶聯絡人.客戶Id);
             return View(客戶聯絡人);
         }
 
@@ -101,12 +117,12 @@ namespace MVCHW.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            客戶聯絡人 客戶聯絡人 = db.客戶聯絡人.Find(id);
-            if (客戶聯絡人 == null)
+            var CC = ClientContact.Get單一筆客戶聯絡人資料(id.Value);
+            if (CC == null)
             {
                 return HttpNotFound();
             }
-            return View(客戶聯絡人);
+            return View(CC);
         }
 
         // POST: 客戶聯絡人/Delete/5
@@ -114,19 +130,19 @@ namespace MVCHW.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult DeleteConfirmed(int id)
         {
-            客戶聯絡人 客戶聯絡人 = db.客戶聯絡人.Find(id);
-            db.客戶聯絡人.Remove(客戶聯絡人);
-            db.SaveChanges();
+            var CC = ClientContact.Get單一筆客戶聯絡人資料(id);
+            ClientContact.Delete(CC);
+            ClientContact.UnitOfWork.Commit();
             return RedirectToAction("Index");
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
-        }
+        //protected override void Dispose(bool disposing)
+        //{
+        //    if (disposing)
+        //    {
+        //        db.Dispose();
+        //    }
+        //    base.Dispose(disposing);
+        //}
     }
 }

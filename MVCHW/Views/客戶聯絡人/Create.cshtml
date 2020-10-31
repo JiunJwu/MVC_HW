@@ -5,11 +5,14 @@
 }
 
 <h2>Create</h2>
-
-@using (Html.BeginForm()) 
+@if (TempData["Message"] != null)
+{
+    <pre>@TempData["Message"]</pre>
+}
+@using (Html.BeginForm())
 {
     @Html.AntiForgeryToken()
-    
+
     <div class="form-horizontal">
         <h4>客戶聯絡人</h4>
         <hr />

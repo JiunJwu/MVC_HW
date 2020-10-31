@@ -7,17 +7,27 @@ using System.Net;
 using System.Web;
 using System.Web.Mvc;
 using MVCHW.Models;
+using Omu.ValueInjecter;
 
 namespace MVCHW.Controllers
 {
     public class 客戶資料Controller : Controller
     {
-        private 客戶資料Entities db = new 客戶資料Entities();
+        客戶資料Repository ClientData;
+        客戶聯絡人Repository ClientContact;
+        客戶銀行資訊Repository ClientBank;
+
+        public 客戶資料Controller()
+        {
+            ClientData = RepositoryHelper.Get客戶資料Repository();
+            ClientContact = RepositoryHelper.Get客戶聯絡人Repository(ClientData.UnitOfWork);
+            ClientBank = RepositoryHelper.Get客戶銀行資訊Repository(ClientContact.UnitOfWork);
+        }
 
         // GET: 客戶資料
         public ActionResult Index()
         {
-            return View(db.客戶資料.ToList());
+            return View(ClientData.All());
         }
 
         // GET: 客戶資料/Details/5
@@ -27,12 +37,12 @@ namespace MVCHW.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            客戶資料 客戶資料 = db.客戶資料.Find(id);
-            if (客戶資料 == null)
+            var CD = ClientData.Get單一筆客戶資料(id.Value);
+            if (CD == null)
             {
                 return HttpNotFound();
             }
-            return View(客戶資料);
+            return View(CD);
         }
 
         // GET: 客戶資料/Create
@@ -46,12 +56,12 @@ namespace MVCHW.Controllers
         // 詳細資訊，請參閱 https://go.microsoft.com/fwlink/?LinkId=317598。
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create([Bind(Include = "Id,客戶名稱,統一編號,電話,傳真,地址,Email")] 客戶資料 客戶資料)
+        public ActionResult Create(客戶資料 客戶資料)
         {
             if (ModelState.IsValid)
             {
-                db.客戶資料.Add(客戶資料);
-                db.SaveChanges();
+                ClientData.Add(客戶資料);
+                ClientData.UnitOfWork.Commit();
                 return RedirectToAction("Index");
             }
 
@@ -65,12 +75,12 @@ namespace MVCHW.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            客戶資料 客戶資料 = db.客戶資料.Find(id);
-            if (客戶資料 == null)
+            var CD = ClientData.Get單一筆客戶資料(id.Value);
+            if (CD == null)
             {
                 return HttpNotFound();
             }
-            return View(客戶資料);
+            return View(CD);
         }
 
         // POST: 客戶資料/Edit/5
@@ -78,12 +88,13 @@ namespace MVCHW.Controllers
         // 詳細資訊，請參閱 https://go.microsoft.com/fwlink/?LinkId=317598。
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit([Bind(Include = "Id,客戶名稱,統一編號,電話,傳真,地址,Email")] 客戶資料 客戶資料)
+        public ActionResult Edit(int ID , 客戶資料Edit 客戶資料)
         {
             if (ModelState.IsValid)
             {
-                db.Entry(客戶資料).State = EntityState.Modified;
-                db.SaveChanges();
+                var CD = ClientData.Get單一筆客戶資料(ID);
+                CD.InjectFrom(客戶資料);
+                ClientData.UnitOfWork.Commit();
                 return RedirectToAction("Index");
             }
             return View(客戶資料);
@@ -96,12 +107,12 @@ namespace MVCHW.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            客戶資料 客戶資料 = db.客戶資料.Find(id);
-            if (客戶資料 == null)
+            var CD = ClientData.Get單一筆客戶資料(id.Value);
+            if (CD == null)
             {
                 return HttpNotFound();
             }
-            return View(客戶資料);
+            return View(CD);
         }
 
         // POST: 客戶資料/Delete/5
@@ -109,19 +120,19 @@ namespace MVCHW.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult DeleteConfirmed(int id)
         {
-            客戶資料 客戶資料 = db.客戶資料.Find(id);
-            db.客戶資料.Remove(客戶資料);
-            db.SaveChanges();
+            var CD = ClientData.Get單一筆客戶資料(id);
+            ClientData.Delete(CD);
+            ClientData.UnitOfWork.Commit();
             return RedirectToAction("Index");
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
-        }
+        //protected override void Dispose(bool disposing)
+        //{
+        //    if (disposing)
+        //    {
+        //        db.Dispose();
+        //    }
+        //    base.Dispose(disposing);
+        //}
     }
 }

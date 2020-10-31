@@ -25,10 +25,13 @@ namespace MVCHW.Models
         public string 姓名 { get; set; }
         
         [StringLength(250, ErrorMessage="欄位長度不得大於 250 個字元")]
+        [EmailAddress]
+        [MustBeUnique]
         [Required]
         public string Email { get; set; }
         
         [StringLength(50, ErrorMessage="欄位長度不得大於 50 個字元")]
+        [RegularExpression(@"\d{4}-\d{6}", ErrorMessage = "手機號碼請依0000-000000的格式填入")]
         public string 手機 { get; set; }
         
         [StringLength(50, ErrorMessage="欄位長度不得大於 50 個字元")]
